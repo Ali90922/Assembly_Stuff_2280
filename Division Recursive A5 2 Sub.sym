@@ -1,0 +1,238 @@
+;Registers:
+;R0 - Stores the return value from the subroutine (the result of f(n)
+;R1 - value of n
+;R6 - stack pointer
+;
+.orig x3000
+LD R6, STACKBASE ;initialize stack pointer to 0x4000
+LD R1, n ;load value n from memory
+;Set up activation record
+ADD R6,R6,#-1 ;push n onto the stack
+STR R1,R6,#0
+ADD R6,R6,#-1 ;for return value
+JSR MyFunc ; call subroutine to compute f(n)
+LDR R0,R6,#0 ;get answer
+ST R0,Result
+ADD R6,R6,#2 ;remove activation record from state
+HALT
+
+
+
+;-------------------------------------------------------
+;DivideByTwo
+;Purpose: Take number n and return n/2
+;Registers
+;R0 - store result (n/2)
+;R1 - store n (the argument)
+;R2 - store mask
+;R3 - store the current bit in result to modify if necessary (R3 is always R2 >> 1)
+;R4 - counter to iterate through the bits of n.
+;R5 - frame pointer
+;R6 - stack pointer
+;R7 - for temporary calculations
+;Stack Frame:
+;R5+1 - argument n
+;R5+0 - return value
+
+DivideByTwo
+;Save registers:
+; we Push each register we want to save on the Runtime Stack -- and when we restore them we restore them 
+; in the reverse order.
+ADD R6,R6,#-1 ;save R5
+STR R5,R6,#0
+ADD R5,R6,#1 ;set R5 to point to the top of the activation record 
+; what the above line is doing is, saving the return address on the stack
+; kind of a temporary pointer to the return block on the runtime stack.
+ADD R6,R6,#-1 ;save R0
+STR R0,R6,#0
+ADD R6,R6,#-1 ;save R1
+STR R1,R6,#0
+ADD R6,R6,#-1 ;save R2
+STR R2,R6,#0
+ADD R6,R6,#-1 ;save R3
+STR R3,R6,#0
+ADD R6,R6,#-1 ;save R4
+STR R4,R6,#0
+; Do not save R6 - as since that is a global register which stored the stack pointer 
+; Stack Pointer stores the address of the top of the Stack Pointer.
+ADD R6,R6,#-1 ;save R7
+STR R7,R6,#0
+
+; From my Understanding it looks like we are trying to divide by 2 here by : 
+; getting a leftwise shift of 15 bits which is equal to one right wise shift for a 16 bit address
+
+
+AND R0,R0,#0 ;clear registers
+AND R2,R2,#0
+AND R3,R3,#0
+AND R4,R4,#0
+ADD R2,R2,#1 ;start with mask 0x0001
+ADD R4,R4,#15 ;number of iterations is 15
+LDR R1,R5,#1 ;get n from activation record
+Loop1:
+ADD R3,R2,#0 ;copy mask into R3
+ADD R2,R2,R2 ;shift bit mask to the left by 1 bit
+AND R7,R1,R2 ;see if the current bit in n is 1 or 0
+BRZ Skip
+ADD R0,R0,R3 ;set the bit denoted by position give by R3 to be 1
+Skip
+ADD R4,R4,#-1
+BRp Loop1
+DoneDivide
+STR R0,R5,#0
+;Restore registers:
+LDR R7,R6,#0 ;restore R7
+ADD R6,R6,#1
+
+LDR R4,R6,#0 ;restore R4
+ADD R6,R6,#1
+LDR R3,R6,#0 ;restore R3
+ADD R6,R6,#1
+LDR R2,R6,#0 ;restore R2
+ADD R6,R6,#1
+LDR R1,R6,#0 ;restore R1
+ADD R6,R6,#1
+LDR R0,R6,#0 ;restore R0
+ADD R6,R6,#1
+LDR R5,R6,#0 ;restore R5
+ADD R6,R6,#1
+RET
+
+
+
+
+
+
+
+
+
+;-------------------------------------------------------
+;MyFunc
+;-------------------------------------------------------
+;Purpose: computes f(n) recursively
+;Output: f(n)
+;
+;Registers:
+;R0 - stores the return value
+;R1 - first input parameter n.
+;R3 - used to hold temporary results
+;R4 - stores the returned value from the first recursive call. This value is stored into R4 before
+;R5 - frame pointer
+;R6 - stack point
+;Stack Frame:
+;R5+1 - argument n
+;R5+0 - return value
+
+MyFunc
+;Save regusters:
+ADD R6,R6,#-1 ;save R5
+STR R5,R6,#0
+ADD R5,R6,#1 ;set R5 to point to the top of the activation record
+
+ADD R6,R6,#-1 ;save R0
+STR R0,R6,#0
+ADD R6,R6,#-1 ;save R1
+STR R1,R6,#0
+ADD R6,R6,#-1 ;save R2
+STR R2,R6,#0
+ADD R6,R6,#-1 ;save R3
+STR R3,R6,#0
+ADD R6,R6,#-1 ;save R4
+STR R4,R6,#0
+ADD R6,R6,#-1 ;save R7
+STR R7,R6,#0
+
+
+
+;compute f(n)
+AND R0,R0,#0
+LDR R1,R5,#1 ;get n
+;check for base case
+ADD R3,R1,#-1
+BRZ BaseCase ;if n-1, then its a base case
+
+
+AND R3,R1,#1 ;consider lsb of n to check if even or odd
+Brp OddCase
+EvenCase ;case when n is even
+;compute n/2
+ADD R6,R6,#-1 ;push n
+STR R1,R6,#0
+ADD R6,R6,#-1 ;set aside space for return value
+JSR DivideByTwo
+LDR R4,R6,#0 ;get return value and store in r4 (R4 contains n/2)
+ADD R6,R6,#2 ;remove the two arguments from the stack
+;call MyFunc(n/2)
+ADD R6,R6,#-1 ;push n/2
+STR R4,R6,#0
+ADD R6,R6,#-1 ;set aside space for return value
+JSR MyFunc
+LDR R4,R6,#0 ;get return value and store in r4 (R4 contains n/2)
+ADD R6,R6,#2 ;remove the two arguments from the stack
+STR R4,R5,#0 ;store result into space for return value
+BR Done
+OddCase ;case when n is odd
+;compute (n-1)/2
+ADD R6,R6,#-1
+ADD R3,R1,#-1 ;R3 <-- n-1
+STR R3,R6,#0 ;push n-1
+
+ADD R6,R6,#-1 ;set aside space for return value
+JSR DivideByTwo
+LDR R3,R6,#0 ;get return value and store in r3 (R3 contains n/2)
+ADD R6,R6,#2 ;remove the two arguments from the stack
+;call MyFunc((n-1)/2)
+ADD R6,R6,#-1 ;push (n-1)/2
+STR R3,R6,#0
+ADD R6,R6,#-1 ;set aside space for return value
+JSR MyFunc
+LDR R4,R6,#0 ;get return value and store in r4 (R4 contains f(n/2))
+ADD R6,R6,#2 ;remove the two arguments from the stack
+;compute (n+1)/2
+ADD R6,R6,#-1
+ADD R3,R1,#1 ;R3 <-- n+1
+STR R3,R6,#0 ;push n+1
+ADD R6,R6,#-1 ;set aside space for return value
+JSR DivideByTwo
+LDR R3,R6,#0 ;get return value and store in r3 (R3 contains n/2)
+ADD R6,R6,#2 ;remove the two arguments from the stack
+;call MyFunc((n+1)/2)
+ADD R6,R6,#-1 ;push (n+1)/2
+STR R3,R6,#0
+ADD R6,R6,#-1 ;set aside space for return value
+JSR MyFunc
+LDR R0,R6,#0 ;get return value and store in r4 (R4 contains n/2)
+ADD R6,R6,#2 ;remove the two arguments from the stack
+ADD R0,R0,R4 ;R0 <- f((n+1)/2) + f((n-1)/2).
+STR R0,R5,#0 ;store result into space for return value
+BR Done
+BaseCase ;base case
+ADD R0,R0,#1 ;return value is 1
+STR R0,R5,#0 ;store return value
+
+
+
+
+Done
+;Restore registers:
+LDR R7,R6,#0 ;restore R7
+ADD R6,R6,#1
+LDR R4,R6,#0 ;restore R4
+
+ADD R6,R6,#1
+LDR R3,R6,#0 ;restore R3
+ADD R6,R6,#1
+LDR R2,R6,#0 ;restore R2
+ADD R6,R6,#1
+LDR R1,R6,#0 ;restore R1
+ADD R6,R6,#1
+LDR R0,R6,#0 ;restore R0
+ADD R6,R6,#1
+LDR R5,R6,#0 ;restore R5
+ADD R6,R6,#1
+RET
+;Data
+n .fill #67
+result .blkw 1
+STACKBASE .fill 0x4000 ;start of stack
+.END
