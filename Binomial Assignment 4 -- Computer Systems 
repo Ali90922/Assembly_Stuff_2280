@@ -1,0 +1,140 @@
+;compute nCr recursively using the formula nCr = (n-1)Cr + (n-1)C(r-1), nC0 = nCn=1
+;We assume the inputs are valid: ie. n>=r>=0.
+;Registers:
+;R0 - Stores the return value from the subroutine (the result of
+; n choose r)
+;R1 - value of n
+;R2 - value of r
+;R6 - stack pointer
+;
+
+.orig x3000
+LD R6, STACKBASE ;initialize stack pointer to 0x4000
+LD R1, n
+LD R2, r
+ADD R6,R6,#-1 ;push n onto the stack
+STR R1,R6,#0
+ADD R6,R6,#-1 ;push r onto the stack
+STR R2,R6,#0
+ADD R6,R6,#-1 ;for return value
+JSR BinomCoeff ; call subroutine to compute nCr
+
+LDR R0,R6,#0 ;get answer
+
+
+ST R0,Result
+ADD R6,R6,#3 ;remove activation record from state
+
+HALT 
+
+;-------------------------------------------------------
+;BinomCoeff
+;-------------------------------------------------------
+;Purpose: This subroutine recursively computes the value of nCr, where n and r are input parameters
+;Input: The parameters n and r are passed on the stack. The values of n and r are assumed to both b
+;Output: nCr is returned in R0
+;
+;Registers:
+;R0 - stores the return value nCr from this call to the
+; subroutine.
+;R1 - first input parameter n.
+;R2 - second input parameter r.
+;R3 - stores n-r and n-1.
+;R4 - stores the returned value from the first recursive call. This value is stored into R4 before
+;R5 - frame pointer
+;R6 - stack point
+
+;Stack Frame:
+;R5+2 - first argument n
+;R5+1 - second argument r
+;R5+0 - return value
+
+BinomCoeff
+
+;Save registers:
+ADD R6,R6,#-1 ;save R5
+STR R5,R6,#0
+
+ADD R5,R6,#1 ;set R5 to point to the top of the activation record
+
+ADD R6,R6,#-1 ;save R0
+STR R0,R6,#0
+ADD R6,R6,#-1 ;save R1
+STR R1,R6,#0
+ADD R6,R6,#-1 ;save R2
+STR R2,R6,#0
+ADD R6,R6,#-1 ;save R3
+STR R3,R6,#0
+ADD R6,R6,#-1 ;save R4
+STR R4,R6,#0
+ADD R6,R6,#-1 ;save R7
+STR R7,R6,#0
+
+
+;compute nCr
+AND R0,R0,#0
+LDR R1,R5,#2 ;get n
+LDR R2,R5,#1 ;get r
+;check for base case
+BRZ BaseCase ;if r is 0, then its a base case
+;check if n is r:
+NOT R3,R2
+ADD R3,R3,#1
+ADD R3,R3,R1
+BRZ BaseCase ;if r=n, go to base case
+BR GenCase ;otherwise (if n > r >= 1) go to the recursive case
+BaseCase ;if (r is 0) or (r is n) then return 1
+ADD R0,R0,#1 ;return value is 1
+STR R0,R5,#0 ;store return value
+BR Done
+
+
+GenCase
+;compute n-1 C r
+ADD R3,R1,#-1 ;n-1
+ADD R6,R6,#-1 ;push n-1
+STR R3,R6,#0
+ADD R6,R6,#-1 ;push r
+STR R2,R6,#0
+ADD R6,R6,#-1 ;set aside space for return value
+JSR BinomCoeff ;perform the first recursive call
+LDR R4,R6,#0 ;get return value and store in r4
+ADD R6,R6,#3 ;remove the two arguments from the stack
+; ADD R4,R0,#0 ;save return value into r4
+;Compute n-1 C r-1
+ADD R2,R2,#-1 ;r-1
+
+ADD R6,R6,#-1 ;push n-1
+STR R3,R6,#0
+ADD R6,R6,#-1 ;push r-1
+STR R2,R6,#0
+ADD R6,R6,#-1 ;set aside space for return value
+JSR BinomCoeff ;perform recursive call to compute n-1 C r-1
+LDR R0,R6,#0 ;get return value
+ADD R6,R6,#3 ;remove the two args from stack
+ADD R0,R0,R4 ;add return value to nCr (in R4)
+STR R0,R5,#0 ;put computed value into activation record
+Done
+;Restore registers:
+LDR R7,R6,#0 ;restore R7
+ADD R6,R6,#1
+LDR R4,R6,#0 ;restore R4
+ADD R6,R6,#1
+LDR R3,R6,#0 ;restore R3
+ADD R6,R6,#1
+LDR R2,R6,#0 ;restore R2
+ADD R6,R6,#1
+LDR R1,R6,#0 ;restore R1
+ADD R6,R6,#1
+LDR R0,R6,#0 ;restore R0
+ADD R6,R6,#1
+LDR R5,R6,#0 ;restore R5
+ADD R6,R6,#1
+RET
+
+;Data
+n .fill #8
+r .fill #4
+result .blkw 1
+STACKBASE .fill 0x4000 ;start of stack
+.END
