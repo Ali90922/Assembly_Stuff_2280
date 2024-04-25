@@ -1,3 +1,30 @@
+;General Rules for advice Recursive Subroutines 
+
+; How to use ur registers 
+; R6 is ur global variable and it will act as your stack pointer -- points to the top of the user runtime stack.
+; R5 will be your frame pointer -- points to the top of ur Activation Record. 
+; R7 
+
+; Steps for Subroutine 
+; 1 . Initialise ur User Runtime stack by loading it into R6 - LD, R6, Stackbase 
+; 2 . Push the arguments onto the stack and dont forget to leave space for the return value -- 
+; ADD R6,R6,#-1
+; STR Rx R6,#0 
+; after doing all this call the subroutine by using JSR 
+; Then on the next line u load the return value from the subroutine : 
+; LDR R0,R6,#0
+; After loading the return value remember to clear the activation stack by adding the number of arguments and return variables to the runtime stack :
+;ADD R6,R6,#2
+
+; Within the subroutine - u are gonna have ur base case and the recursive case : Rules for the recursive case : 
+
+; Compute the arguments -- push the arguments and then set space aside for the return value on the runtime stack.
+; After pushing the arguments onto the runtime stack call the subroutine using JSR 
+; After u call the subroutine - u load the return value and then clear the activation record. 
+; After doing that - u save the return value to R5, which is the frame pointer - stores the location of the return address. !
+
+
+
 ;Compute 1+2+3+...+n where n is given in the data region
 ;Assume n >= 0.
 
