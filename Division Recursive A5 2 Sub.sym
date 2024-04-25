@@ -1,3 +1,10 @@
+
+
+
+; Advice on calling a subroutine from within a subroutine -- scenario where u have two subroutines !
+
+
+
 ;Registers:
 ;R0 - Stores the return value from the subroutine (the result of f(n)
 ;R1 - value of n
@@ -106,9 +113,20 @@ RET
 
 
 
+
+
+
+
+
+
+
+
+
+
 ;-------------------------------------------------------
 ;MyFunc
 ;-------------------------------------------------------
+
 ;Purpose: computes f(n) recursively
 ;Output: f(n)
 ;
@@ -127,7 +145,11 @@ MyFunc
 ;Save regusters:
 ADD R6,R6,#-1 ;save R5
 STR R5,R6,#0
+
+; Always save R5 and then increment it by one to save the address fo the return value !
 ADD R5,R6,#1 ;set R5 to point to the top of the activation record
+
+; Then save all the other registers, excluding R6 
 
 ADD R6,R6,#-1 ;save R0
 STR R0,R6,#0
@@ -150,27 +172,43 @@ LDR R1,R5,#1 ;get n
 ;check for base case
 ADD R3,R1,#-1
 BRZ BaseCase ;if n-1, then its a base case
-
-
 AND R3,R1,#1 ;consider lsb of n to check if even or odd
 Brp OddCase
+
+
+
 EvenCase ;case when n is even
-;compute n/2
+
+;compute n/2 
+; Push all the arguments to the stack -- cal the division subroutine - get the return value from R6 - remove activation record 
+; and store the return value in R0
+
 ADD R6,R6,#-1 ;push n
 STR R1,R6,#0
 ADD R6,R6,#-1 ;set aside space for return value
+
 JSR DivideByTwo
+
 LDR R4,R6,#0 ;get return value and store in r4 (R4 contains n/2)
 ADD R6,R6,#2 ;remove the two arguments from the stack
+
 ;call MyFunc(n/2)
+; Same process here all over again - push arguments onto the Stack - then call the subroutine then  load the return value from R6
+; then clear the activation record !
+
+
 ADD R6,R6,#-1 ;push n/2
 STR R4,R6,#0
+
 ADD R6,R6,#-1 ;set aside space for return value
+
 JSR MyFunc
 LDR R4,R6,#0 ;get return value and store in r4 (R4 contains n/2)
 ADD R6,R6,#2 ;remove the two arguments from the stack
 STR R4,R5,#0 ;store result into space for return value
 BR Done
+
+
 OddCase ;case when n is odd
 ;compute (n-1)/2
 ADD R6,R6,#-1
