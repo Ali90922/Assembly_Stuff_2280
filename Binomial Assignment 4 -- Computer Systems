@@ -17,12 +17,14 @@ STR R1,R6,#0
 ADD R6,R6,#-1 ;push r onto the stack
 STR R2,R6,#0
 ADD R6,R6,#-1 ;for return value
+
 JSR BinomCoeff ; call subroutine to compute nCr
 
 LDR R0,R6,#0 ;get answer
 
 
 ST R0,Result
+
 ADD R6,R6,#3 ;remove activation record from state
 
 HALT 
@@ -71,35 +73,67 @@ ADD R6,R6,#-1 ;save R7
 STR R7,R6,#0
 
 
+; All registers saved above now the meaty stuff 
+
+
+
+
+
+
+
+
+
+
 ;compute nCr
+
 AND R0,R0,#0
+; load the values 
 LDR R1,R5,#2 ;get n
 LDR R2,R5,#1 ;get r
+
+
 ;check for base case
 BRZ BaseCase ;if r is 0, then its a base case
+
+
+
 ;check if n is r:
 NOT R3,R2
 ADD R3,R3,#1
 ADD R3,R3,R1
 BRZ BaseCase ;if r=n, go to base case
+
+
 BR GenCase ;otherwise (if n > r >= 1) go to the recursive case
+
+; Return value is 1 in base case so store 1 in R5:
+
 BaseCase ;if (r is 0) or (r is n) then return 1
 ADD R0,R0,#1 ;return value is 1
 STR R0,R5,#0 ;store return value
 BR Done
 
 
+
+; Tough part is here -- The recursive part of the subroutine : 
+
 GenCase
-;compute n-1 C r
+
+;compute n-1 C r    -- Compute the arguments mate and push them onto the stack
+
 ADD R3,R1,#-1 ;n-1
 ADD R6,R6,#-1 ;push n-1
 STR R3,R6,#0
 ADD R6,R6,#-1 ;push r
 STR R2,R6,#0
+
 ADD R6,R6,#-1 ;set aside space for return value
+
+
 JSR BinomCoeff ;perform the first recursive call
 LDR R4,R6,#0 ;get return value and store in r4
 ADD R6,R6,#3 ;remove the two arguments from the stack
+
 ; ADD R4,R0,#0 ;save return value into r4
 ;Compute n-1 C r-1
 ADD R2,R2,#-1 ;r-1
@@ -110,10 +144,23 @@ ADD R6,R6,#-1 ;push r-1
 STR R2,R6,#0
 ADD R6,R6,#-1 ;set aside space for return value
 JSR BinomCoeff ;perform recursive call to compute n-1 C r-1
+
+
+; Adding up the two recursive calls and saving that to R5 (points to top of Activation record (return value))
 LDR R0,R6,#0 ;get return value
 ADD R6,R6,#3 ;remove the two args from stack
 ADD R0,R0,R4 ;add return value to nCr (in R4)
 STR R0,R5,#0 ;put computed value into activation record
+
+
+
+
+
+
+
+
+
+; Important stuff is all above this is just restoring registers now
 Done
 ;Restore registers:
 LDR R7,R6,#0 ;restore R7
